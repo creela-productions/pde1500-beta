@@ -20,7 +20,10 @@ wss.on("connection", (ws) => {
     ws.on("close", () => console.log("Client disconnected"));
 });
 
-// Serve index.html from the root
+// Serve static files (including index.html)
+app.use(express.static(__dirname));
+
+// Serve index.html for root requests
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
