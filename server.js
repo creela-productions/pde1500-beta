@@ -1,29 +1,40 @@
-const express = require("express");
 const WebSocket = require("ws");
-const path = require("path");
 
-const PORT = process.env.PORT || 10000;
-const app = express();
-const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Start WebSocket Server
+const wss = new WebSocket.Server({ port: 8080 });
 
-const wss = new WebSocket.Server({ server });
+let worlds = {
+  world1: { name: "Fantasy Land", players: 2 },
+  world2: { name: "Sci-Fi Zone", players: 3 }
+};
+
+// Broadcast world list to all connected clients
+function broadcastWorlds() {
+  const worldList = JSON.stringify({ type: "world-list", worlds });
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(worldList);
+    }
+  });
+}
 
 wss.on("connection", (ws) => {
-    console.log("New client connected");
-    ws.send("Welcome to the WebSocket server!");
+  console.log("Client connected");
+  ws.send(JSON.stringify({ type: "world-list", worlds }));
 
-    ws.on("message", (message) => {
-        console.log(`Received: ${message}`);
-        ws.send(`Echo: ${message}`);
-    });
+  ws.on("message", (message) => {
+    const data = JSON.parse(message);
+    if (data.type === "join-world") {
+      if (worlds[data.world]) {
+        worlds[data.world].players += 1;
+        broadcastWorlds();
+      }
+    }
+  });
 
-    ws.on("close", () => console.log("Client disconnected"));
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
 });
 
-// Serve static files (including index.html)
-app.use(express.static(__dirname));
-
-// Serve index.html for root requests
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
-});
+console.log("WebSocket server running on ws://localhost:8080");
